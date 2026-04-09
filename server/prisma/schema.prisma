@@ -1,0 +1,189 @@
+// ============================================================
+// Nexus Flow — Prisma Schema
+// PostgreSQL · Generated based on Agent.md business rules
+// ============================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─────────────────────────────────────────────
+// ENUMS
+// ─────────────────────────────────────────────
+
+enum UserRole {
+  ADMIN        // Quyền cấu hình hệ thống
+  DIRECTOR     // Trụ sở chính — duyệt cấp cao nhất
+  BRANCH_LEAD  // Trưởng chi nhánh — duyệt cấp 1
+  STAFF        // Nhân viên — tạo yêu cầu
+}
+
+enum BranchType {
+  HEADQUARTERS // Trụ sở chính
+  BRANCH       // Chi nhánh
+}
+
+/// Trạng thái luồng duyệt (State Machine theo Agent.md §3)
+enum ApprovalStatus {
+  DRAFT      // Đang soạn thảo
+  PENDING    // Chờ BranchLead duyệt
+  IN_REVIEW  // BranchLead đã duyệt, chờ Director
+  APPROVED   // Duyệt hoàn tất
+  REJECTED   // Bị từ chối, trả lại người tạo
+}
+
+enum ApprovalAction {
+  SUBMIT         // Staff gửi yêu cầu
+  APPROVE        // Phê duyệt
+  REJECT         // Từ chối
+  REQUEST_CHANGE // Yêu cầu chỉnh sửa
+  RESUBMIT       // Gửi lại sau khi chỉnh sửa
+}
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+enum AuditAction {
+  CREATE
+  UPDATE
+  DELETE
+  APPROVE
+  REJECT
+  LOGIN
+  LOGOUT
+}
+
+// ─────────────────────────────────────────────
+// MODELS
+// ─────────────────────────────────────────────
+
+model Branch {
+  id        String     @id @default(cuid())
+  name      String
+  code      String     @unique
+  type      BranchType @default(BRANCH)
+  isActive  Boolean    @default(true)
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  // Relations
+  users            User[]
+  approvalRequests ApprovalRequest[]
+
+  @@map("branches")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String
+  /// Lưu dạng hash (bcrypt), không bao giờ plain-text
+  password  String
+  role      UserRole @default(STAFF)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  /// Nullable: Director/Admin không thuộc chi nhánh cụ thể
+  branchId String?
+  branch   Branch? @relation(fields: [branchId], references: [id])
+
+  // Relations
+  /// Các yêu cầu do User này tạo ra
+  createdRequests   ApprovalRequest[] @relation("RequestCreator")
+  /// Các yêu cầu User này đang là người duyệt hiện tại
+  pendingApprovals  ApprovalRequest[] @relation("CurrentApprover")
+  /// Lịch sử các lần User thực hiện hành động duyệt
+  approvalHistories ApprovalHistory[]
+  auditLogs         AuditLog[]
+
+  @@map("users")
+}
+
+model ApprovalRequest {
+  id          String         @id @default(cuid())
+  title       String
+  description String?
+  /// Loại yêu cầu theo module (vd: "LEAVE", "EXPENSE", "PURCHASE")
+  requestType String
+  status      ApprovalStatus @default(DRAFT)
+
+  /// Dữ liệu nghiệp vụ linh hoạt theo từng requestType
+  payload Json?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // FK — Creator (Staff)
+  creatorId String
+  creator   User   @relation("RequestCreator", fields: [creatorId], references: [id])
+
+  /// Người duyệt hiện tại (null khi DRAFT/APPROVED/REJECTED)
+  currentApproverId String?
+  currentApprover   User?   @relation("CurrentApprover", fields: [currentApproverId], references: [id])
+
+  // FK — Branch (scoping dữ liệu theo chi nhánh)
+  branchId String
+  branch   Branch @relation(fields: [branchId], references: [id])
+
+  // Relations
+  approvalHistories ApprovalHistory[]
+  auditLogs         AuditLog[]
+
+  @@index([status])
+  @@index([creatorId])
+  @@index([currentApproverId])
+  @@index([branchId])
+  @@map("approval_requests")
+}
+
+/// Lịch sử từng bước trong luồng duyệt — immutable, không update/delete
+model ApprovalHistory {
+  id        String         @id @default(cuid())
+  action    ApprovalAction
+  /// Ghi chú của người duyệt (bắt buộc khi REJECT/REQUEST_CHANGE)
+  comment   String?
+  createdAt DateTime       @default(now())
+
+  // FK
+  requestId  String
+  request    ApprovalRequest @relation(fields: [requestId], references: [id])
+  approverId String
+  approver   User            @relation(fields: [approverId], references: [id])
+
+  @@index([requestId])
+  @@map("approval_histories")
+}
+
+/// Ghi lại toàn bộ hành động Create/Update/Delete/Approve trên hệ thống
+model AuditLog {
+  id         String      @id @default(cuid())
+  action     AuditAction
+  /// Tên module liên quan (vd: "USER", "APPROVAL_REQUEST", "BRANCH")
+  module     String
+  /// ID của entity bị tác động
+  entityId   String?
+  entityType String?
+  /// Snapshot trước khi thay đổi
+  oldValues  Json?
+  /// Snapshot sau khi thay đổi
+  newValues  Json?
+  ipAddress  String?
+  userAgent  String?
+  createdAt  DateTime    @default(now())
+
+  // FK
+  userId    String
+  user      User             @relation(fields: [userId], references: [id])
+  requestId String?
+  request   ApprovalRequest? @relation(fields: [requestId], references: [id])
+
+  @@index([userId])
+  @@index([module])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
