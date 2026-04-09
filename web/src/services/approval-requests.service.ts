@@ -17,3 +17,39 @@ export async function createApprovalRequest(
   );
   return response.data;
 }
+
+export async function getIncomingRequests(): Promise<ApprovalRequestResponse[]> {
+  const response = await apiClient.get<ApprovalRequestResponse[]>(
+    '/approval-requests/incoming',
+  );
+  return response.data;
+}
+
+export async function getOutgoingRequests(): Promise<ApprovalRequestResponse[]> {
+  const response = await apiClient.get<ApprovalRequestResponse[]>(
+    '/approval-requests/outgoing',
+  );
+  return response.data;
+}
+
+export async function approveRequest(
+  id: string,
+  comment?: string,
+): Promise<ApprovalRequestResponse> {
+  const response = await apiClient.patch<ApprovalRequestResponse>(
+    `/approval-requests/${id}/approve`,
+    { comment },
+  );
+  return response.data;
+}
+
+export async function rejectRequest(
+  id: string,
+  comment: string,
+): Promise<ApprovalRequestResponse> {
+  const response = await apiClient.patch<ApprovalRequestResponse>(
+    `/approval-requests/${id}/reject`,
+    { comment },
+  );
+  return response.data;
+}

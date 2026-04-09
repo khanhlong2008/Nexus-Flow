@@ -8,6 +8,7 @@ import { AuditLogModule } from './common/audit-log/audit-log.module';
 import { UsersModule } from './users/users.module';
 import { ApprovalRequestsModule } from './approval-requests/approval-requests.module';
 import { AuthModule } from './auth/auth.module';
+import { RequestTypesModule } from './request-types/request-types.module';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { RolesGuard } from './common/guards/roles.guard';
 
@@ -23,6 +24,7 @@ import { RolesGuard } from './common/guards/roles.guard';
     AuthModule,
     UsersModule,
     ApprovalRequestsModule,
+    RequestTypesModule,
   ],
   controllers: [AppController],
   providers: [

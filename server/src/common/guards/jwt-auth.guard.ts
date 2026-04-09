@@ -28,7 +28,7 @@ export class JwtAuthGuard implements CanActivate {
 
     const request = context
       .switchToHttp()
-      .getRequest<Request & { user?: JwtPayload }>();
+      .getRequest<Request & { user?: JwtPayload & { id?: string } }>();
 
     const token = this.extractBearerToken(request);
     if (!token) {
@@ -37,8 +37,8 @@ export class JwtAuthGuard implements CanActivate {
 
     try {
       const payload = this.jwtService.verify<JwtPayload>(token);
-      // Gán payload vào request để các guard/handler sau có thể dùng
-      request.user = payload;
+      // Đồng bộ id từ payload.sub để tương thích với controller/service hiện tại
+      request.user = { ...payload, id: payload.sub };
     } catch {
       throw new UnauthorizedException('Token không hợp lệ hoặc đã hết hạn');
     }

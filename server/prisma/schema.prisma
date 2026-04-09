@@ -43,10 +43,6 @@ enum ApprovalAction {
   REQUEST_CHANGE // Yêu cầu chỉnh sửa
   RESUBMIT       // Gửi lại sau khi chỉnh sửa
 }
-datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
-}
 enum AuditAction {
   CREATE
   UPDATE
@@ -139,6 +135,19 @@ model ApprovalRequest {
   @@index([currentApproverId])
   @@index([branchId])
   @@map("approval_requests")
+}
+
+model RequestType {
+  id          String   @id @default(cuid())
+  code        String   @unique
+  name        String
+  description String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([isActive])
+  @@map("request_types")
 }
 
 /// Lịch sử từng bước trong luồng duyệt — immutable, không update/delete

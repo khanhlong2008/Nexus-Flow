@@ -12,7 +12,7 @@ export class UsersService {
    * Password bị loại khỏi response ở tầng Prisma select — không bao giờ lộ ra ngoài.
    */
   async getUserWithMenu(userId: string): Promise<UserWithMenuDto> {
-    const user = await this.prisma.user.findUnique({
+    const user = await this.prisma.user.findFirst({
       where: { id: userId, isActive: true },
       select: {
         id:       true,

@@ -19,7 +19,7 @@ import { RejectRequestDto } from './dto/reject-request.dto';
 
 /** Shape tối giản của request.user được inject bởi AuthGuard */
 type AuthenticatedRequest = ExpressRequest & {
-  user: { id: string; role: UserRole };
+  user: { id?: string; sub?: string; role: UserRole };
 };
 
 // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
@@ -40,6 +40,10 @@ const { DIRECTOR, BRANCH_LEAD, ADMIN } = UserRole;
 export class ApprovalRequestsController {
   constructor(private readonly service: ApprovalRequestsService) {}
 
+  private resolveUserId(req: AuthenticatedRequest): string {
+    return req.user.id ?? req.user.sub ?? '';
+  }
+
   // ─── CREATE ────────────────────────────────────────────────
 
   @Post()
@@ -47,7 +51,7 @@ export class ApprovalRequestsController {
     @Req() req: AuthenticatedRequest,
     @Body() dto: CreateApprovalRequestDto,
   ) {
-    return this.service.createApprovalRequest(req.user.id, dto);
+    return this.service.createApprovalRequest(this.resolveUserId(req), dto);
   }
 
   // ─── READ ──────────────────────────────────────────────────
@@ -56,44 +60,44 @@ export class ApprovalRequestsController {
   @Get('incoming')
   @Roles(BRANCH_LEAD, DIRECTOR, ADMIN)
   getIncoming(@Req() req: AuthenticatedRequest) {
-    return this.service.getIncomingRequests(req.user.id);
+    return this.service.getIncomingRequests(this.resolveUserId(req));
   }
 
   /** Danh sách yêu cầu đã gửi đi (outbox) */
   @Get('outgoing')
   getOutgoing(@Req() req: AuthenticatedRequest) {
-    return this.service.getOutgoingRequests(req.user.id);
+    return this.service.getOutgoingRequests(this.resolveUserId(req));
   }
 
   // ─── APPROVE / REJECT ──────────────────────────────────────
 
   /**
    * Phê duyệt yêu cầu.
-   * Chỉ DIRECTOR và BRANCH_LEAD mới có quyền gọi endpoint này.
+   * Chỉ DIRECTOR, ADMIN và BRANCH_LEAD mới có quyền gọi endpoint này.
    */
   @Patch(':id/approve')
-  @Roles(DIRECTOR, BRANCH_LEAD)
+  @Roles(DIRECTOR, ADMIN, BRANCH_LEAD)
   approve(
     @Req() req: AuthenticatedRequest,
     @Param('id') requestId: string,
     @Body() dto: ApproveRequestDto,
   ) {
     // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-call
-    return this.service.approveRequest(req.user.id, requestId, dto);
+    return this.service.approveRequest(this.resolveUserId(req), requestId, dto);
   }
 
   /**
    * Từ chối yêu cầu.
-   * Chỉ DIRECTOR và BRANCH_LEAD mới có quyền gọi endpoint này.
+   * Chỉ DIRECTOR, ADMIN và BRANCH_LEAD mới có quyền gọi endpoint này.
    */
   @Patch(':id/reject')
-  @Roles(DIRECTOR, BRANCH_LEAD)
+  @Roles(DIRECTOR, ADMIN, BRANCH_LEAD)
   reject(
     @Req() req: AuthenticatedRequest,
     @Param('id') requestId: string,
     @Body() dto: RejectRequestDto,
   ) {
     // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-call
-    return this.service.rejectRequest(req.user.id, requestId, dto);
+    return this.service.rejectRequest(this.resolveUserId(req), requestId, dto);
   }
 }

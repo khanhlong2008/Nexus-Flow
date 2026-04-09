@@ -1,3 +1,5 @@
+import type { UserRole } from './menu';
+
 export type ApprovalStatus =
   | 'DRAFT'
   | 'PENDING'
@@ -5,18 +7,20 @@ export type ApprovalStatus =
   | 'APPROVED'
   | 'REJECTED';
 
-export type RequestType = 'CARD' | 'SAVINGS' | 'BOND';
+export type RequestType = string;
 
 export const REQUEST_TYPE_OPTIONS: { value: RequestType; label: string }[] = [
-  { value: 'CARD', label: 'Thẻ' },
-  { value: 'SAVINGS', label: 'Sổ tiết kiệm' },
-  { value: 'BOND', label: 'Trái phiếu' },
+  { value: 'LEAVE', label: 'Nghỉ phép' },
+  { value: 'EXPENSE', label: 'Hoàn ứng chi phí' },
+  { value: 'PURCHASE', label: 'Mua sắm' },
+  { value: 'CARD', label: 'Mở thẻ' },
 ];
 
 export const REQUEST_TYPE_LABELS: Record<string, string> = {
+  LEAVE: 'Nghỉ phép',
+  EXPENSE: 'Hoàn ứng chi phí',
+  PURCHASE: 'Mua sắm',
   CARD: 'Thẻ',
-  SAVINGS: 'Sổ tiết kiệm',
-  BOND: 'Trái phiếu',
 };
 
 export const APPROVAL_STATUS_LABELS: Record<ApprovalStatus, string> = {
@@ -31,6 +35,7 @@ export interface ApprovalRequestCreator {
   id: string;
   name: string;
   email: string;
+  role: UserRole;
 }
 
 export interface ApprovalRequestBranch {

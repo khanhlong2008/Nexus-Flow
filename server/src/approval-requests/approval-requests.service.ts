@@ -31,7 +31,10 @@ export class ApprovalRequestsService {
     creatorId: string,
     dto: CreateApprovalRequestDto,
   ): Promise<ApprovalRequest> {
-    const creator = await this.prisma.user.findUnique({
+    const normalizedRequestType = dto.requestType.trim().toUpperCase();
+    await this.ensureActiveRequestType(normalizedRequestType);
+
+    const creator = await this.prisma.user.findFirst({
       where: { id: creatorId, isActive: true },
       select: { role: true, branchId: true },
     });
@@ -50,7 +53,7 @@ export class ApprovalRequestsService {
       data: {
         title:       dto.title,
         description: dto.description,
-        requestType: dto.requestType,
+        requestType: normalizedRequestType,
         payload:     dto.payload as Prisma.InputJsonValue ?? undefined,
         status:      'DRAFT',
         creatorId,
@@ -89,7 +92,10 @@ export class ApprovalRequestsService {
     creatorId: string,
     dto: CreateApprovalRequestDto,
   ): Promise<ApprovalRequest> {
-    const creator = await this.prisma.user.findUnique({
+    const normalizedRequestType = dto.requestType.trim().toUpperCase();
+    await this.ensureActiveRequestType(normalizedRequestType);
+
+    const creator = await this.prisma.user.findFirst({
       where: { id: creatorId, isActive: true },
       select: { role: true, branchId: true },
     });
@@ -108,9 +114,9 @@ export class ApprovalRequestsService {
       data: {
         title:       dto.title,
         description: dto.description,
-        requestType: dto.requestType,
+        requestType: normalizedRequestType,
         payload:     dto.payload as Prisma.InputJsonValue ?? undefined,
-        status:      'PENDING',
+        status:      creator.role === UserRole.BRANCH_LEAD ? 'IN_REVIEW' : 'PENDING',
         creatorId,
         branchId:    creator.branchId,
       },
@@ -146,7 +152,7 @@ export class ApprovalRequestsService {
    * - ADMIN       : tất cả requests không phải DRAFT (giám sát)
    */
   async getIncomingRequests(userId: string): Promise<ApprovalRequestResponseDto[]> {
-    const user = await this.prisma.user.findUnique({
+    const user = await this.prisma.user.findFirst({
       where: { id: userId, isActive: true },
       select: { role: true, branchId: true },
     });
@@ -162,7 +168,7 @@ export class ApprovalRequestsService {
         return this.prisma.approvalRequest.findMany({
           where: { branchId: user.branchId, status: 'PENDING' },
           include: {
-            creator: { select: { id: true, name: true, email: true } },
+            creator: { select: { id: true, name: true, email: true, role: true } },
           },
           orderBy: { createdAt: 'asc' },
         }) as Promise<ApprovalRequestResponseDto[]>;
@@ -170,20 +176,22 @@ export class ApprovalRequestsService {
 
       case UserRole.DIRECTOR:
         return this.prisma.approvalRequest.findMany({
-          where: { status: 'IN_REVIEW' },
+          where: { status: { not: 'DRAFT' } },
           include: {
-            creator: { select: { id: true, name: true, email: true } },
+            creator: { select: { id: true, name: true, email: true, role: true } },
             branch:  { select: { id: true, name: true } },
+            currentApprover: { select: { id: true, name: true } },
           },
-          orderBy: { createdAt: 'asc' },
+          orderBy: { createdAt: 'desc' },
         }) as Promise<ApprovalRequestResponseDto[]>;
 
       case UserRole.ADMIN:
         return this.prisma.approvalRequest.findMany({
-          where: { status: { notIn: ['DRAFT'] } },
+          where: { status: { not: 'DRAFT' } },
           include: {
-            creator: { select: { id: true, name: true, email: true } },
+            creator: { select: { id: true, name: true, email: true, role: true } },
             branch:  { select: { id: true, name: true } },
+            currentApprover: { select: { id: true, name: true } },
           },
           orderBy: { createdAt: 'desc' },
         }) as Promise<ApprovalRequestResponseDto[]>;
@@ -205,7 +213,7 @@ export class ApprovalRequestsService {
    * - ADMIN       : tất cả requests trong hệ thống (giám sát toàn diện)
    */
   async getOutgoingRequests(userId: string): Promise<ApprovalRequestResponseDto[]> {
-    const user = await this.prisma.user.findUnique({
+    const user = await this.prisma.user.findFirst({
       where: { id: userId, isActive: true },
       select: { role: true, branchId: true },
     });
@@ -222,6 +230,7 @@ export class ApprovalRequestsService {
           },
           include: {
             currentApprover: { select: { id: true, name: true } },
+            creator: { select: { id: true, name: true, email: true, role: true } },
           },
           orderBy: { updatedAt: 'desc' },
         }) as Promise<ApprovalRequestResponseDto[]>;
@@ -231,14 +240,15 @@ export class ApprovalRequestsService {
           where: { creatorId: userId },
           include: {
             currentApprover: { select: { id: true, name: true } },
+            creator: { select: { id: true, name: true, email: true, role: true } },
           },
           orderBy: { updatedAt: 'desc' },
         }) as Promise<ApprovalRequestResponseDto[]>;
 
       case UserRole.DIRECTOR:
         return this.prisma.approvalRequest.findMany({
-          where: { creatorId: userId },
           include: {
+            creator: { select: { id: true, name: true, email: true, role: true } },
             branch:          { select: { id: true, name: true } },
             currentApprover: { select: { id: true, name: true } },
           },
@@ -246,11 +256,11 @@ export class ApprovalRequestsService {
         }) as Promise<ApprovalRequestResponseDto[]>;
 
       case UserRole.ADMIN:
-        // Admin xem toàn bộ hệ thống — phục vụ mục đích giám sát & audit
         return this.prisma.approvalRequest.findMany({
           include: {
-            creator: { select: { id: true, name: true, email: true } },
-            branch:  { select: { id: true, name: true } },
+            creator: { select: { id: true, name: true, email: true, role: true } },
+            branch:          { select: { id: true, name: true } },
+            currentApprover: { select: { id: true, name: true } },
           },
           orderBy: { updatedAt: 'desc' },
         }) as Promise<ApprovalRequestResponseDto[]>;
@@ -276,11 +286,14 @@ export class ApprovalRequestsService {
     dto: ApproveRequestDto,
   ): Promise<ApprovalRequest> {
     const [approver, request] = await Promise.all([
-      this.prisma.user.findUnique({
+      this.prisma.user.findFirst({
         where: { id: approverId, isActive: true },
         select: { role: true, branchId: true },
       }),
-      this.prisma.approvalRequest.findUnique({ where: { id: requestId } }),
+      this.prisma.approvalRequest.findUnique({
+        where: { id: requestId },
+        include: { creator: { select: { role: true } } },
+      }),
     ]);
 
     if (!approver) throw new NotFoundException('Approver không tồn tại hoặc đã bị vô hiệu hóa');
@@ -302,14 +315,17 @@ export class ApprovalRequestsService {
       if (approver.branchId !== request.branchId) {
         throw new ForbiddenException('BranchLead chỉ được duyệt yêu cầu thuộc chi nhánh của mình');
       }
-      nextStatus = 'IN_REVIEW';
-    } else if (approver.role === UserRole.DIRECTOR) {
+      nextStatus = request.creator.role === UserRole.STAFF ? 'APPROVED' : 'IN_REVIEW';
+    } else if (approver.role === UserRole.DIRECTOR || approver.role === UserRole.ADMIN) {
       if (request.status !== 'IN_REVIEW') {
         throw new BadRequestException(`Chỉ có thể duyệt yêu cầu ở trạng thái IN_REVIEW (hiện tại: ${request.status})`);
       }
+      if (request.creator.role !== UserRole.BRANCH_LEAD) {
+        throw new ForbiddenException('Director/Admin chỉ duyệt yêu cầu do BranchLead tạo');
+      }
       nextStatus = 'APPROVED';
     } else {
-      throw new ForbiddenException('Chỉ BRANCH_LEAD và DIRECTOR mới có quyền phê duyệt');
+      throw new ForbiddenException('Chỉ BRANCH_LEAD, DIRECTOR và ADMIN mới có quyền phê duyệt');
     }
 
     // Transaction: cập nhật trạng thái + ghi lịch sử duyệt
@@ -359,11 +375,14 @@ export class ApprovalRequestsService {
     dto: RejectRequestDto,
   ): Promise<ApprovalRequest> {
     const [approver, request] = await Promise.all([
-      this.prisma.user.findUnique({
+      this.prisma.user.findFirst({
         where: { id: approverId, isActive: true },
         select: { role: true, branchId: true },
       }),
-      this.prisma.approvalRequest.findUnique({ where: { id: requestId } }),
+      this.prisma.approvalRequest.findUnique({
+        where: { id: requestId },
+        include: { creator: { select: { role: true } } },
+      }),
     ]);
 
     if (!approver) throw new NotFoundException('Approver không tồn tại hoặc đã bị vô hiệu hóa');
@@ -381,12 +400,15 @@ export class ApprovalRequestsService {
       if (approver.branchId !== request.branchId) {
         throw new ForbiddenException('BranchLead chỉ được từ chối yêu cầu thuộc chi nhánh của mình');
       }
-    } else if (approver.role === UserRole.DIRECTOR) {
+    } else if (approver.role === UserRole.DIRECTOR || approver.role === UserRole.ADMIN) {
       if (request.status !== 'IN_REVIEW') {
-        throw new BadRequestException(`Director chỉ có thể từ chối yêu cầu ở trạng thái IN_REVIEW (hiện tại: ${request.status})`);
+        throw new BadRequestException(`Director/Admin chỉ có thể từ chối yêu cầu ở trạng thái IN_REVIEW (hiện tại: ${request.status})`);
+      }
+      if (request.creator.role !== UserRole.BRANCH_LEAD) {
+        throw new ForbiddenException('Director/Admin chỉ từ chối yêu cầu do BranchLead tạo');
       }
     } else {
-      throw new ForbiddenException('Chỉ BRANCH_LEAD và DIRECTOR mới có quyền từ chối');
+      throw new ForbiddenException('Chỉ BRANCH_LEAD, DIRECTOR và ADMIN mới có quyền từ chối');
     }
 
     const updated = await this.prisma.$transaction(async (tx) => {
@@ -418,5 +440,16 @@ export class ApprovalRequestsService {
     });
 
     return updated;
+  }
+
+  private async ensureActiveRequestType(code: string): Promise<void> {
+    const requestType = await this.prisma.requestType.findUnique({
+      where: { code },
+      select: { isActive: true },
+    });
+
+    if (!requestType || !requestType.isActive) {
+      throw new BadRequestException(`Loại yêu cầu ${code} không hợp lệ hoặc đang bị ẩn`);
+    }
   }
 }

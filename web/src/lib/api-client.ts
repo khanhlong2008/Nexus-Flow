@@ -5,7 +5,6 @@ const apiClient = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
-  withCredentials: true,
 });
 
 // Request interceptor — đính kèm Bearer token từ localStorage nếu có
@@ -23,6 +22,7 @@ apiClient.interceptors.response.use(
   (error) => {
     if (error.response?.status === 401) {
       localStorage.removeItem('access_token');
+      localStorage.removeItem('auth_user');
       window.location.href = '/login';
     }
     return Promise.reject(error);

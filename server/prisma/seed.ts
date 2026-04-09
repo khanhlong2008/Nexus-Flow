@@ -83,6 +83,26 @@ async function main(): Promise<void> {
   console.log(`✅ Director: ${director.email}`);
 
   // ─────────────────────────────────────────────
+  // 2b. Tạo Admin (ngang quyền Director)
+  // ─────────────────────────────────────────────
+  const adminPassword = await hashPassword('Admin@123');
+
+  const admin = await prisma.user.upsert({
+    where: { email: 'admin@nexusflow.vn' },
+    update: {},
+    create: {
+      email: 'admin@nexusflow.vn',
+      name: 'Lý Thị Quản Trị',
+      password: adminPassword,
+      role: UserRole.ADMIN,
+      isActive: true,
+      branchId: null,
+    },
+  });
+
+  console.log(`✅ Admin: ${admin.email}`);
+
+  // ─────────────────────────────────────────────
   // 3. Tạo BranchLead cho chi nhánh Hà Nội
   // ─────────────────────────────────────────────
   const branchLeadHanoiPassword = await hashPassword('BranchLead@123');
@@ -192,6 +212,36 @@ async function main(): Promise<void> {
     });
   }
 
+  // ─────────────────────────────────────────────
+  // 7. Tạo danh mục loại yêu cầu động
+  // ─────────────────────────────────────────────
+  const requestTypes = [
+    { code: 'LEAVE', name: 'Nghỉ phép', description: 'Xin nghỉ phép theo ngày hoặc theo đợt' },
+    { code: 'EXPENSE', name: 'Hoàn ứng chi phí', description: 'Đề nghị hoàn ứng hoặc thanh toán công tác phí' },
+    { code: 'PURCHASE', name: 'Mua sắm', description: 'Đề xuất mua sắm tài sản hoặc vật tư' },
+    { code: 'CARD', name: 'Mở thẻ', description: 'Đề nghị mở thẻ cho nhân sự hoặc đối tác' },
+    { code: 'CONTRACT', name: 'Phê duyệt hợp đồng', description: 'Trình duyệt hợp đồng nội bộ/đối tác' },
+  ];
+
+  for (const type of requestTypes) {
+    await prisma.requestType.upsert({
+      where: { code: type.code },
+      update: {
+        name: type.name,
+        description: type.description,
+        isActive: true,
+      },
+      create: {
+        code: type.code,
+        name: type.name,
+        description: type.description,
+        isActive: true,
+      },
+    });
+  }
+
+  console.log(`✅ Request types: ${requestTypes.length} loại`);
+
   console.log(`✅ Staff HCM: ${staffHCMData.length} nhân viên`);
 
   // ─────────────────────────────────────────────
@@ -202,6 +252,7 @@ async function main(): Promise<void> {
   console.log('Role         | Email                              | Password');
   console.log('─────────────────────────────────────────────────');
   console.log(`DIRECTOR     | director@nexusflow.vn              | Director@123`);
+  console.log(`ADMIN        | admin@nexusflow.vn                 | Admin@123`);
   console.log(`BRANCH_LEAD  | branchlead.hanoi@nexusflow.vn      | BranchLead@123`);
   console.log(`BRANCH_LEAD  | branchlead.hcm@nexusflow.vn        | BranchLead@123`);
   console.log(`STAFF (HN)   | staff[1-3].hanoi@nexusflow.vn      | Staff@123`);
