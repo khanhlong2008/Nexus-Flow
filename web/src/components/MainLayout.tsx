@@ -14,6 +14,7 @@ import {
   ShieldCheck,
 } from 'lucide-react';
 import { useAuthStore } from '../store/auth.store';
+import logo from '../assets/nexus-logo.svg';
 
 const ICONS: Record<string, ElementType<{ size?: number }>> = {
   FilePlus,
@@ -54,7 +55,10 @@ export function MainLayout() {
   return (
     <div className="app-shell">
       <aside className="app-sidebar">
-        <div className="brand">Nexus Flow</div>
+        <div className="brand">
+          <img src={logo} alt="Nexus Flow logo" className="brand-logo" />
+          <span>Nexus Flow</span>
+        </div>
 
         <nav>
           <ul className="menu-list">

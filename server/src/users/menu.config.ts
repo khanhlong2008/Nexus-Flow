@@ -16,7 +16,7 @@ const ALL_MENU_ITEMS: MenuItem[] = [
   { id: 'branch-approve',   label: 'Duyệt chi nhánh',       path: '/requests/branch-approve', icon: 'CheckSquare'     },
   { id: 'branch-reports',   label: 'Báo cáo chi nhánh',     path: '/reports/branch',          icon: 'BarChart2'       },
   // --- Hệ thống (Director/Admin) ---
-  { id: 'final-approve',    label: 'Phê duyệt cuối cùng',   path: '/requests/final-approve',  icon: 'BadgeCheck'      },
+  { id: 'final-approve',    label: 'Phê duyệt',   path: '/requests/final-approve',  icon: 'BadgeCheck'      },
   { id: 'dashboard',        label: 'Tổng quan',              path: '/dashboard',               icon: 'LayoutDashboard' },
   { id: 'branch-management',label: 'Quản lý Chi nhánh',      path: '/branches',                icon: 'Building2'       },
   { id: 'reports',          label: 'Báo cáo',                path: '/reports',                 icon: 'PieChart'        },

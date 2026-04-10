@@ -166,11 +166,16 @@ export class ApprovalRequestsService {
       case UserRole.BRANCH_LEAD: {
         if (!user.branchId) return [];
         return this.prisma.approvalRequest.findMany({
-          where: { branchId: user.branchId, status: 'PENDING' },
+          where: {
+            branchId: user.branchId,
+            creator: { role: UserRole.STAFF },
+            status: { in: ['PENDING', 'APPROVED', 'REJECTED'] },
+          },
           include: {
             creator: { select: { id: true, name: true, email: true, role: true } },
+            currentApprover: { select: { id: true, name: true } },
           },
-          orderBy: { createdAt: 'asc' },
+          orderBy: { updatedAt: 'desc' },
         }) as Promise<ApprovalRequestResponseDto[]>;
       }
 

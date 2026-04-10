@@ -67,6 +67,19 @@ a {
   gap: 16px;
 }
 
+.login-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.login-logo {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  box-shadow: 0 6px 16px rgba(65, 52, 45, 0.22);
+}
+
 .eyebrow {
   font-family: 'Space Grotesk', sans-serif;
   letter-spacing: 0.08em;
@@ -243,6 +256,15 @@ textarea.mono {
   color: #fff;
   font-size: 22px;
   margin: 6px 8px 20px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.brand-logo {
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
 }
 
 .menu-list {

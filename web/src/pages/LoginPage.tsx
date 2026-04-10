@@ -3,12 +3,15 @@ import { useNavigate } from 'react-router-dom';
 import { LogIn } from 'lucide-react';
 import { login } from '../services/auth.service';
 import { useAuthStore } from '../store/auth.store';
+import logo from '../assets/nexus-logo.svg';
 
 const DEMO_ACCOUNTS = [
   { role: 'DIRECTOR', email: 'director@nexusflow.vn', password: 'Director@123' },
-  { role: 'ADMIN', email: 'admin@nexusflow.vn', password: 'Admin@123' },
+  // { role: 'ADMIN', email: 'admin@nexusflow.vn', password: 'Admin@123' },
   { role: 'BRANCH_LEAD', email: 'branchlead.hanoi@nexusflow.vn', password: 'BranchLead@123' },
   { role: 'STAFF', email: 'staff1.hanoi@nexusflow.vn', password: 'Staff@123' },
+  { role: 'BRANCH_LEAD', email: 'branchlead.hcm@nexusflow.vn', password: 'BranchLead@123' },
+  { role: 'STAFF', email: 'staff1.hcm@nexusflow.vn', password: 'Staff@123' },
 ];
 
 export default function LoginPage() {
@@ -42,8 +45,13 @@ export default function LoginPage() {
   return (
     <div className="login-page">
       <div className="login-card">
-        <p className="eyebrow">Nexus Flow Platform</p>
-        <h1>Đăng nhập hệ thống phê duyệt</h1>
+        <div className="login-brand">
+          <img src={logo} alt="Nexus Flow logo" className="login-logo" />
+          <div>
+            <p className="eyebrow">Nexus Flow Platform</p>
+            <h1>Đăng nhập hệ thống phê duyệt</h1>
+          </div>
+        </div>
         <p className="subtle">Giao diện web đã được căn theo API backend NestJS và RBAC hiện tại.</p>
 
         <form onSubmit={onSubmit} className="form-stack">
