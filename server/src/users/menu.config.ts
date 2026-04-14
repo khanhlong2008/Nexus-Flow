@@ -10,25 +10,67 @@ export interface MenuItem {
 // Toàn bộ menu items trong hệ thống
 const ALL_MENU_ITEMS: MenuItem[] = [
   // --- Yêu cầu ---
-  { id: 'create-request',   label: 'Tạo yêu cầu',          path: '/requests/create',         icon: 'FilePlus'        },
-  { id: 'my-requests',      label: 'Yêu cầu của tôi',       path: '/requests/mine',           icon: 'FileText'        },
+  {
+    id: 'create-request',
+    label: 'Tạo yêu cầu',
+    path: '/requests/create',
+    icon: 'FilePlus',
+  },
+  {
+    id: 'my-requests',
+    label: 'Yêu cầu của tôi',
+    path: '/requests/mine',
+    icon: 'FileText',
+  },
   // --- Chi nhánh ---
-  { id: 'branch-approve',   label: 'Duyệt chi nhánh',       path: '/requests/branch-approve', icon: 'CheckSquare'     },
-  { id: 'branch-reports',   label: 'Báo cáo chi nhánh',     path: '/reports/branch',          icon: 'BarChart2'       },
+  {
+    id: 'branch-approve',
+    label: 'Duyệt chi nhánh',
+    path: '/requests/branch-approve',
+    icon: 'CheckSquare',
+  },
+  {
+    id: 'branch-reports',
+    label: 'Báo cáo chi nhánh',
+    path: '/reports/branch',
+    icon: 'BarChart2',
+  },
   // --- Hệ thống (Director/Admin) ---
-  { id: 'final-approve',    label: 'Phê duyệt',   path: '/requests/final-approve',  icon: 'BadgeCheck'      },
-  { id: 'dashboard',        label: 'Tổng quan',              path: '/dashboard',               icon: 'LayoutDashboard' },
-  { id: 'branch-management',label: 'Quản lý Chi nhánh',      path: '/branches',                icon: 'Building2'       },
-  { id: 'reports',          label: 'Báo cáo',                path: '/reports',                 icon: 'PieChart'        },
-  { id: 'audit-logs',       label: 'Audit Log',              path: '/audit-logs',              icon: 'ScrollText'      },
-  { id: 'access-control',   label: 'Phân quyền & Cấu hình', path: '/access-control',          icon: 'ShieldCheck'     },
+  {
+    id: 'final-approve',
+    label: 'Phê duyệt',
+    path: '/requests/final-approve',
+    icon: 'BadgeCheck',
+  },
+  {
+    id: 'dashboard',
+    label: 'Tổng quan',
+    path: '/dashboard',
+    icon: 'LayoutDashboard',
+  },
+  {
+    id: 'branch-management',
+    label: 'Quản lý Chi nhánh',
+    path: '/branches',
+    icon: 'Building2',
+  },
+  { id: 'reports', label: 'Báo cáo', path: '/reports', icon: 'PieChart' },
+  {
+    id: 'audit-logs',
+    label: 'Audit Log',
+    path: '/audit-logs',
+    icon: 'ScrollText',
+  },
+  {
+    id: 'access-control',
+    label: 'Phân quyền & Cấu hình',
+    path: '/access-control',
+    icon: 'ShieldCheck',
+  },
 ];
 
 const ROLE_MENU_MAP: Record<UserRole, string[]> = {
-  [UserRole.STAFF]: [
-    'create-request',
-    'my-requests',
-  ],
+  [UserRole.STAFF]: ['create-request', 'my-requests'],
   [UserRole.BRANCH_LEAD]: [
     'create-request',
     'my-requests',

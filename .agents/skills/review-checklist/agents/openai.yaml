@@ -1,0 +1,8 @@
+interface:
+  display_name: "Review Checklist"
+  short_description: "Repo-specific review gates for Nexus Flow"
+  brand_color: "#EF4444"
+  default_prompt: "Review changes using Nexus Flow checklist"
+policy:
+  allow_implicit_invocation: true
+

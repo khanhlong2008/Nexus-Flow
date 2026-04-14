@@ -497,6 +497,42 @@ textarea.mono {
   gap: 6px;
 }
 
+.table-pagination {
+  margin-top: 10px;
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: center;
+}
+
+.pagination-info {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.pagination-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pagination-size-label {
+  font-size: 13px;
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.pagination-actions select {
+  width: auto;
+  min-width: 68px;
+}
+
+.pagination-page {
+  font-size: 13px;
+  font-weight: 700;
+  color: #5e4c47;
+}
+
 .status-badge {
   display: inline-flex;
   border-radius: 999px;
@@ -650,5 +686,14 @@ textarea.mono {
 
   .form-actions {
     flex-direction: column;
+  }
+
+  .table-pagination {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .pagination-actions {
+    flex-wrap: wrap;
   }
 }

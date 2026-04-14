@@ -3,6 +3,8 @@ import { X } from 'lucide-react';
 import type { ApprovalRequestResponse, ApprovalStatus } from '../types/approval-request';
 import { APPROVAL_STATUS_LABELS, REQUEST_TYPE_LABELS } from '../types/approval-request';
 import { useAuthStore } from '../store/auth.store';
+import { DataTable, type DataTableColumn } from '../shared/components/DataTable';
+import { formatDateTimeVi } from '../shared/utils/date';
 
 const STATUS_CLASS_MAP: Record<ApprovalStatus, string> = {
   DRAFT: 'status-badge status-draft',
@@ -82,81 +84,75 @@ export function RequestTable({
   const role = useAuthStore((state) => state.user?.role ?? null);
   const [expanded, setExpanded] = useState<ApprovalRequestResponse | null>(null);
 
-  if (isLoading) {
-    return <div className="card-state">Đang tải dữ liệu...</div>;
-  }
-
-  if (requests.length === 0) {
-    return <div className="card-state">{emptyMessage}</div>;
-  }
+  const columns: DataTableColumn<ApprovalRequestResponse>[] = [
+    {
+      id: 'title',
+      header: 'Tiêu đề',
+      cell: (request) => (
+        <>
+          <div className="cell-main">{request.title}</div>
+          <div className="cell-sub">#{request.id.slice(0, 8).toUpperCase()}</div>
+        </>
+      ),
+    },
+    {
+      id: 'creator',
+      header: 'Người tạo',
+      cell: (request) => request.creator?.name ?? request.creatorId.slice(0, 8),
+    },
+    {
+      id: 'type',
+      header: 'Loại',
+      cell: (request) => REQUEST_TYPE_LABELS[request.requestType] ?? request.requestType,
+    },
+    {
+      id: 'status',
+      header: 'Trạng thái',
+      cell: (request) => <StatusBadge status={request.status} />,
+    },
+    {
+      id: 'updatedAt',
+      header: 'Cập nhật',
+      cell: (request) => formatDateTimeVi(request.updatedAt),
+    },
+    {
+      id: 'actions',
+      header: 'Thao tác',
+      headerClassName: 'actions-col',
+      cell: (request) => {
+        const allowAction = canTakeAction(role, request);
+        return (
+          <div className="table-actions">
+            <button type="button" className="btn ghost" onClick={() => setExpanded(request)}>
+              Xem
+            </button>
+            {allowAction && (
+              <>
+                <button type="button" className="btn success" onClick={() => onApprove?.(request)}>
+                  Duyệt
+                </button>
+                <button type="button" className="btn danger" onClick={() => onReject?.(request)}>
+                  Từ chối
+                </button>
+              </>
+            )}
+          </div>
+        );
+      },
+    },
+  ];
 
   return (
     <>
-      <div className="table-wrap">
-        <table className="request-table">
-          <thead>
-            <tr>
-              <th>Tiêu đề</th>
-              <th>Người tạo</th>
-              <th>Loại</th>
-              <th>Trạng thái</th>
-              <th>Cập nhật</th>
-              <th className="actions-col">Thao tác</th>
-            </tr>
-          </thead>
-          <tbody>
-            {requests.map((request) => {
-              const allowAction = canTakeAction(role, request);
-              const author = request.creator?.name ?? request.creatorId.slice(0, 8);
-              const updatedAt = new Date(request.updatedAt).toLocaleString('vi-VN');
-
-              return (
-                <tr key={request.id}>
-                  <td>
-                    <div className="cell-main">{request.title}</div>
-                    <div className="cell-sub">#{request.id.slice(0, 8).toUpperCase()}</div>
-                  </td>
-                  <td>{author}</td>
-                  <td>{REQUEST_TYPE_LABELS[request.requestType] ?? request.requestType}</td>
-                  <td>
-                    <StatusBadge status={request.status} />
-                  </td>
-                  <td>{updatedAt}</td>
-                  <td>
-                    <div className="table-actions">
-                      <button
-                        type="button"
-                        className="btn ghost"
-                        onClick={() => setExpanded(request)}
-                      >
-                        Xem
-                      </button>
-                      {allowAction && (
-                        <>
-                          <button
-                            type="button"
-                            className="btn success"
-                            onClick={() => onApprove?.(request)}
-                          >
-                            Duyệt
-                          </button>
-                          <button
-                            type="button"
-                            className="btn danger"
-                            onClick={() => onReject?.(request)}
-                          >
-                            Từ chối
-                          </button>
-                        </>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
+      <DataTable
+        data={requests}
+        columns={columns}
+        rowKey={(request) => request.id}
+        isLoading={isLoading}
+        emptyMessage={emptyMessage}
+        initialPageSize={10}
+        pageSizeOptions={[5, 10, 20]}
+      />
 
       {expanded && <PayloadModal request={expanded} onClose={() => setExpanded(null)} />}
     </>

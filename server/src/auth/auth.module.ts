@@ -16,7 +16,7 @@ import { AuditLogModule } from '../common/audit-log/audit-log.module';
       useFactory: (config: ConfigService): JwtModuleOptions => ({
         secret: config.getOrThrow<string>('JWT_SECRET'),
         signOptions: {
-          expiresIn: config.get('JWT_EXPIRES_IN', '8h') as `${number}${'s'|'m'|'h'|'d'}`,
+          expiresIn: config.get('JWT_EXPIRES_IN', '8h'),
         },
       }),
     }),

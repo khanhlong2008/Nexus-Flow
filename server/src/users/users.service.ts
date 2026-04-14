@@ -15,27 +15,29 @@ export class UsersService {
     const user = await this.prisma.user.findFirst({
       where: { id: userId, isActive: true },
       select: {
-        id:       true,
-        email:    true,
-        name:     true,
-        role:     true,
+        id: true,
+        email: true,
+        name: true,
+        role: true,
         branchId: true,
-        branch:   { select: { name: true } },
+        branch: { select: { name: true } },
       },
     });
 
     if (!user) {
-      throw new NotFoundException(`User ${userId} không tồn tại hoặc đã bị vô hiệu hóa`);
+      throw new NotFoundException(
+        `User ${userId} không tồn tại hoặc đã bị vô hiệu hóa`,
+      );
     }
 
     return {
-      id:         user.id,
-      email:      user.email,
-      name:       user.name,
-      role:       user.role,
-      branchId:   user.branchId,
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      role: user.role,
+      branchId: user.branchId,
       branchName: user.branch?.name ?? null,
-      menu:       buildMenuForRole(user.role),
+      menu: buildMenuForRole(user.role),
     };
   }
 }

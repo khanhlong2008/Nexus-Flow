@@ -43,35 +43,39 @@ export class ApprovalRequestsService {
       throw new NotFoundException('User không tồn tại hoặc đã bị vô hiệu hóa');
     }
     if (creator.role === UserRole.DIRECTOR || creator.role === UserRole.ADMIN) {
-      throw new ForbiddenException('Director và Admin không được phép tạo approval request');
+      throw new ForbiddenException(
+        'Director và Admin không được phép tạo approval request',
+      );
     }
     if (!creator.branchId) {
-      throw new ForbiddenException('User phải thuộc một chi nhánh để tạo yêu cầu');
+      throw new ForbiddenException(
+        'User phải thuộc một chi nhánh để tạo yêu cầu',
+      );
     }
 
     const request = await this.prisma.approvalRequest.create({
       data: {
-        title:       dto.title,
+        title: dto.title,
         description: dto.description,
         requestType: normalizedRequestType,
-        payload:     dto.payload as Prisma.InputJsonValue ?? undefined,
-        status:      'DRAFT',
+        payload: (dto.payload as Prisma.InputJsonValue) ?? undefined,
+        status: 'DRAFT',
         creatorId,
-        branchId:    creator.branchId,
+        branchId: creator.branchId,
       },
     });
 
     // Audit log bắt buộc theo copilot-instructions.md §3
     await this.auditLog.log({
-      userId:     creatorId,
-      action:     'CREATE',
-      module:     'APPROVAL_REQUEST',
-      entityId:   request.id,
+      userId: creatorId,
+      action: 'CREATE',
+      module: 'APPROVAL_REQUEST',
+      entityId: request.id,
       entityType: 'ApprovalRequest',
       newValues: {
-        title:       request.title,
+        title: request.title,
         requestType: request.requestType,
-        status:      request.status,
+        status: request.status,
       },
     });
 
@@ -104,36 +108,40 @@ export class ApprovalRequestsService {
       throw new NotFoundException('User không tồn tại hoặc đã bị vô hiệu hóa');
     }
     if (creator.role === UserRole.DIRECTOR || creator.role === UserRole.ADMIN) {
-      throw new ForbiddenException('Director và Admin không được phép tạo approval request');
+      throw new ForbiddenException(
+        'Director và Admin không được phép tạo approval request',
+      );
     }
     if (!creator.branchId) {
-      throw new ForbiddenException('User phải thuộc một chi nhánh để tạo yêu cầu');
+      throw new ForbiddenException(
+        'User phải thuộc một chi nhánh để tạo yêu cầu',
+      );
     }
 
     const request = await this.prisma.approvalRequest.create({
       data: {
-        title:       dto.title,
+        title: dto.title,
         description: dto.description,
         requestType: normalizedRequestType,
-        payload:     dto.payload as Prisma.InputJsonValue ?? undefined,
-        status:      creator.role === UserRole.BRANCH_LEAD ? 'IN_REVIEW' : 'PENDING',
+        payload: (dto.payload as Prisma.InputJsonValue) ?? undefined,
+        status: creator.role === UserRole.BRANCH_LEAD ? 'IN_REVIEW' : 'PENDING',
         creatorId,
-        branchId:    creator.branchId,
+        branchId: creator.branchId,
       },
     });
 
     await this.auditLog.log({
-      userId:     creatorId,
-      action:     'CREATE',
-      module:     'APPROVAL_REQUEST',
-      entityId:   request.id,
+      userId: creatorId,
+      action: 'CREATE',
+      module: 'APPROVAL_REQUEST',
+      entityId: request.id,
       entityType: 'ApprovalRequest',
-      requestId:  request.id,
+      requestId: request.id,
       newValues: {
-        title:       request.title,
+        title: request.title,
         requestType: request.requestType,
-        status:      request.status,
-        branchId:    request.branchId,
+        status: request.status,
+        branchId: request.branchId,
       },
     });
 
@@ -149,15 +157,18 @@ export class ApprovalRequestsService {
    * - STAFF       : không có quyền duyệt → trả về []
    * - BRANCH_LEAD : PENDING requests trong chính branchId của họ
    * - DIRECTOR    : IN_REVIEW requests toàn hệ thống (cấp 2)
-   * - ADMIN       : tất cả requests không phải DRAFT (giám sát)
+   * - ADMIN       : IN_REVIEW requests toàn hệ thống (cùng phạm vi xử lý với Director)
    */
-  async getIncomingRequests(userId: string): Promise<ApprovalRequestResponseDto[]> {
+  async getIncomingRequests(
+    userId: string,
+  ): Promise<ApprovalRequestResponseDto[]> {
     const user = await this.prisma.user.findFirst({
       where: { id: userId, isActive: true },
       select: { role: true, branchId: true },
     });
 
-    if (!user) throw new NotFoundException('User không tồn tại hoặc đã bị vô hiệu hóa');
+    if (!user)
+      throw new NotFoundException('User không tồn tại hoặc đã bị vô hiệu hóa');
 
     switch (user.role) {
       case UserRole.STAFF:
@@ -169,10 +180,12 @@ export class ApprovalRequestsService {
           where: {
             branchId: user.branchId,
             creator: { role: UserRole.STAFF },
-            status: { in: ['PENDING', 'APPROVED', 'REJECTED'] },
+            status: 'PENDING',
           },
           include: {
-            creator: { select: { id: true, name: true, email: true, role: true } },
+            creator: {
+              select: { id: true, name: true, email: true, role: true },
+            },
             currentApprover: { select: { id: true, name: true } },
           },
           orderBy: { updatedAt: 'desc' },
@@ -181,10 +194,15 @@ export class ApprovalRequestsService {
 
       case UserRole.DIRECTOR:
         return this.prisma.approvalRequest.findMany({
-          where: { status: { not: 'DRAFT' } },
+          where: {
+            status: 'IN_REVIEW',
+            creator: { role: UserRole.BRANCH_LEAD },
+          },
           include: {
-            creator: { select: { id: true, name: true, email: true, role: true } },
-            branch:  { select: { id: true, name: true } },
+            creator: {
+              select: { id: true, name: true, email: true, role: true },
+            },
+            branch: { select: { id: true, name: true } },
             currentApprover: { select: { id: true, name: true } },
           },
           orderBy: { createdAt: 'desc' },
@@ -192,10 +210,15 @@ export class ApprovalRequestsService {
 
       case UserRole.ADMIN:
         return this.prisma.approvalRequest.findMany({
-          where: { status: { not: 'DRAFT' } },
+          where: {
+            status: 'IN_REVIEW',
+            creator: { role: UserRole.BRANCH_LEAD },
+          },
           include: {
-            creator: { select: { id: true, name: true, email: true, role: true } },
-            branch:  { select: { id: true, name: true } },
+            creator: {
+              select: { id: true, name: true, email: true, role: true },
+            },
+            branch: { select: { id: true, name: true } },
             currentApprover: { select: { id: true, name: true } },
           },
           orderBy: { createdAt: 'desc' },
@@ -212,49 +235,66 @@ export class ApprovalRequestsService {
 
   /**
    * Data Scoping theo Role:
-   * - STAFF       : chỉ requests do chính mình tạo + branchId guard
-   * - BRANCH_LEAD : chỉ requests do chính mình tạo
+   * - STAFF       : chỉ requests do chính mình tạo + branchId guard (không lấy DRAFT)
+   * - BRANCH_LEAD : chỉ requests do chính mình tạo (không lấy DRAFT)
    * - DIRECTOR    : chỉ requests do chính mình tạo (không giới hạn branch)
-   * - ADMIN       : tất cả requests trong hệ thống (giám sát toàn diện)
+   * - ADMIN       : chỉ requests do chính mình tạo (không lấy DRAFT)
    */
-  async getOutgoingRequests(userId: string): Promise<ApprovalRequestResponseDto[]> {
+  async getOutgoingRequests(
+    userId: string,
+  ): Promise<ApprovalRequestResponseDto[]> {
     const user = await this.prisma.user.findFirst({
       where: { id: userId, isActive: true },
       select: { role: true, branchId: true },
     });
 
-    if (!user) throw new NotFoundException('User không tồn tại hoặc đã bị vô hiệu hóa');
+    if (!user)
+      throw new NotFoundException('User không tồn tại hoặc đã bị vô hiệu hóa');
 
     switch (user.role) {
       case UserRole.STAFF:
         return this.prisma.approvalRequest.findMany({
           where: {
             creatorId: userId,
+            status: { not: 'DRAFT' },
             // branchId guard phòng data leak nếu user bị chuyển branch
             branchId: user.branchId ?? undefined,
           },
           include: {
             currentApprover: { select: { id: true, name: true } },
-            creator: { select: { id: true, name: true, email: true, role: true } },
+            creator: {
+              select: { id: true, name: true, email: true, role: true },
+            },
           },
           orderBy: { updatedAt: 'desc' },
         }) as Promise<ApprovalRequestResponseDto[]>;
 
       case UserRole.BRANCH_LEAD:
         return this.prisma.approvalRequest.findMany({
-          where: { creatorId: userId },
+          where: {
+            creatorId: userId,
+            status: { not: 'DRAFT' },
+          },
           include: {
             currentApprover: { select: { id: true, name: true } },
-            creator: { select: { id: true, name: true, email: true, role: true } },
+            creator: {
+              select: { id: true, name: true, email: true, role: true },
+            },
           },
           orderBy: { updatedAt: 'desc' },
         }) as Promise<ApprovalRequestResponseDto[]>;
 
       case UserRole.DIRECTOR:
         return this.prisma.approvalRequest.findMany({
+          where: {
+            creatorId: userId,
+            status: { not: 'DRAFT' },
+          },
           include: {
-            creator: { select: { id: true, name: true, email: true, role: true } },
-            branch:          { select: { id: true, name: true } },
+            creator: {
+              select: { id: true, name: true, email: true, role: true },
+            },
+            branch: { select: { id: true, name: true } },
             currentApprover: { select: { id: true, name: true } },
           },
           orderBy: { updatedAt: 'desc' },
@@ -262,9 +302,15 @@ export class ApprovalRequestsService {
 
       case UserRole.ADMIN:
         return this.prisma.approvalRequest.findMany({
+          where: {
+            creatorId: userId,
+            status: { not: 'DRAFT' },
+          },
           include: {
-            creator: { select: { id: true, name: true, email: true, role: true } },
-            branch:          { select: { id: true, name: true } },
+            creator: {
+              select: { id: true, name: true, email: true, role: true },
+            },
+            branch: { select: { id: true, name: true } },
             currentApprover: { select: { id: true, name: true } },
           },
           orderBy: { updatedAt: 'desc' },
@@ -301,12 +347,17 @@ export class ApprovalRequestsService {
       }),
     ]);
 
-    if (!approver) throw new NotFoundException('Approver không tồn tại hoặc đã bị vô hiệu hóa');
-    if (!request)  throw new NotFoundException('Approval request không tồn tại');
+    if (!approver)
+      throw new NotFoundException(
+        'Approver không tồn tại hoặc đã bị vô hiệu hóa',
+      );
+    if (!request) throw new NotFoundException('Approval request không tồn tại');
 
     // Người tạo không được tự duyệt (Agent.md §2)
     if (request.creatorId === approverId) {
-      throw new ForbiddenException('Bạn không thể tự phê duyệt yêu cầu của chính mình');
+      throw new ForbiddenException(
+        'Bạn không thể tự phê duyệt yêu cầu của chính mình',
+      );
     }
 
     // Xác định trạng thái chuyển tiếp theo role và trạng thái hiện tại
@@ -314,23 +365,37 @@ export class ApprovalRequestsService {
 
     if (approver.role === UserRole.BRANCH_LEAD) {
       if (request.status !== 'PENDING') {
-        throw new BadRequestException(`Chỉ có thể duyệt yêu cầu ở trạng thái PENDING (hiện tại: ${request.status})`);
+        throw new BadRequestException(
+          `Chỉ có thể duyệt yêu cầu ở trạng thái PENDING (hiện tại: ${request.status})`,
+        );
       }
       // BRANCH_LEAD duyệt phải thuộc cùng chi nhánh
       if (approver.branchId !== request.branchId) {
-        throw new ForbiddenException('BranchLead chỉ được duyệt yêu cầu thuộc chi nhánh của mình');
+        throw new ForbiddenException(
+          'BranchLead chỉ được duyệt yêu cầu thuộc chi nhánh của mình',
+        );
       }
-      nextStatus = request.creator.role === UserRole.STAFF ? 'APPROVED' : 'IN_REVIEW';
-    } else if (approver.role === UserRole.DIRECTOR || approver.role === UserRole.ADMIN) {
+      nextStatus =
+        request.creator.role === UserRole.STAFF ? 'APPROVED' : 'IN_REVIEW';
+    } else if (
+      approver.role === UserRole.DIRECTOR ||
+      approver.role === UserRole.ADMIN
+    ) {
       if (request.status !== 'IN_REVIEW') {
-        throw new BadRequestException(`Chỉ có thể duyệt yêu cầu ở trạng thái IN_REVIEW (hiện tại: ${request.status})`);
+        throw new BadRequestException(
+          `Chỉ có thể duyệt yêu cầu ở trạng thái IN_REVIEW (hiện tại: ${request.status})`,
+        );
       }
       if (request.creator.role !== UserRole.BRANCH_LEAD) {
-        throw new ForbiddenException('Director/Admin chỉ duyệt yêu cầu do BranchLead tạo');
+        throw new ForbiddenException(
+          'Director/Admin chỉ duyệt yêu cầu do BranchLead tạo',
+        );
       }
       nextStatus = 'APPROVED';
     } else {
-      throw new ForbiddenException('Chỉ BRANCH_LEAD, DIRECTOR và ADMIN mới có quyền phê duyệt');
+      throw new ForbiddenException(
+        'Chỉ BRANCH_LEAD, DIRECTOR và ADMIN mới có quyền phê duyệt',
+      );
     }
 
     // Transaction: cập nhật trạng thái + ghi lịch sử duyệt
@@ -344,7 +409,7 @@ export class ApprovalRequestsService {
         data: {
           requestId,
           approverId,
-          action:  'APPROVE',
+          action: 'APPROVE',
           comment: dto.comment ?? null,
         },
       });
@@ -354,13 +419,13 @@ export class ApprovalRequestsService {
 
     // Audit log bắt buộc theo copilot-instructions.md §3
     await this.auditLog.log({
-      userId:     approverId,
-      action:     'APPROVE',
-      module:     'APPROVAL_REQUEST',
-      entityId:   requestId,
+      userId: approverId,
+      action: 'APPROVE',
+      module: 'APPROVAL_REQUEST',
+      entityId: requestId,
       entityType: 'ApprovalRequest',
-      oldValues:  { status: request.status },
-      newValues:  { status: nextStatus, currentApproverId: approverId },
+      oldValues: { status: request.status },
+      newValues: { status: nextStatus, currentApproverId: approverId },
     });
 
     return updated;
@@ -390,43 +455,61 @@ export class ApprovalRequestsService {
       }),
     ]);
 
-    if (!approver) throw new NotFoundException('Approver không tồn tại hoặc đã bị vô hiệu hóa');
-    if (!request)  throw new NotFoundException('Approval request không tồn tại');
+    if (!approver)
+      throw new NotFoundException(
+        'Approver không tồn tại hoặc đã bị vô hiệu hóa',
+      );
+    if (!request) throw new NotFoundException('Approval request không tồn tại');
 
     if (request.creatorId === approverId) {
-      throw new ForbiddenException('Bạn không thể từ chối yêu cầu của chính mình');
+      throw new ForbiddenException(
+        'Bạn không thể từ chối yêu cầu của chính mình',
+      );
     }
 
     // Kiểm tra trạng thái hợp lệ để từ chối
     if (approver.role === UserRole.BRANCH_LEAD) {
       if (request.status !== 'PENDING') {
-        throw new BadRequestException(`BranchLead chỉ có thể từ chối yêu cầu ở trạng thái PENDING (hiện tại: ${request.status})`);
+        throw new BadRequestException(
+          `BranchLead chỉ có thể từ chối yêu cầu ở trạng thái PENDING (hiện tại: ${request.status})`,
+        );
       }
       if (approver.branchId !== request.branchId) {
-        throw new ForbiddenException('BranchLead chỉ được từ chối yêu cầu thuộc chi nhánh của mình');
+        throw new ForbiddenException(
+          'BranchLead chỉ được từ chối yêu cầu thuộc chi nhánh của mình',
+        );
       }
-    } else if (approver.role === UserRole.DIRECTOR || approver.role === UserRole.ADMIN) {
+    } else if (
+      approver.role === UserRole.DIRECTOR ||
+      approver.role === UserRole.ADMIN
+    ) {
       if (request.status !== 'IN_REVIEW') {
-        throw new BadRequestException(`Director/Admin chỉ có thể từ chối yêu cầu ở trạng thái IN_REVIEW (hiện tại: ${request.status})`);
+        throw new BadRequestException(
+          `Director/Admin chỉ có thể từ chối yêu cầu ở trạng thái IN_REVIEW (hiện tại: ${request.status})`,
+        );
       }
       if (request.creator.role !== UserRole.BRANCH_LEAD) {
-        throw new ForbiddenException('Director/Admin chỉ từ chối yêu cầu do BranchLead tạo');
+        throw new ForbiddenException(
+          'Director/Admin chỉ từ chối yêu cầu do BranchLead tạo',
+        );
       }
     } else {
-      throw new ForbiddenException('Chỉ BRANCH_LEAD, DIRECTOR và ADMIN mới có quyền từ chối');
+      throw new ForbiddenException(
+        'Chỉ BRANCH_LEAD, DIRECTOR và ADMIN mới có quyền từ chối',
+      );
     }
 
     const updated = await this.prisma.$transaction(async (tx) => {
       const updatedRequest = await tx.approvalRequest.update({
         where: { id: requestId },
-        data:  { status: 'REJECTED', currentApproverId: approverId },
+        data: { status: 'REJECTED', currentApproverId: approverId },
       });
 
       await tx.approvalHistory.create({
         data: {
           requestId,
           approverId,
-          action:  'REJECT',
+          action: 'REJECT',
           comment: dto.comment,
         },
       });
@@ -435,13 +518,13 @@ export class ApprovalRequestsService {
     });
 
     await this.auditLog.log({
-      userId:     approverId,
-      action:     'REJECT',
-      module:     'APPROVAL_REQUEST',
-      entityId:   requestId,
+      userId: approverId,
+      action: 'REJECT',
+      module: 'APPROVAL_REQUEST',
+      entityId: requestId,
       entityType: 'ApprovalRequest',
-      oldValues:  { status: request.status },
-      newValues:  { status: 'REJECTED', currentApproverId: approverId },
+      oldValues: { status: request.status },
+      newValues: { status: 'REJECTED', currentApproverId: approverId },
     });
 
     return updated;
@@ -454,7 +537,9 @@ export class ApprovalRequestsService {
     });
 
     if (!requestType || !requestType.isActive) {
-      throw new BadRequestException(`Loại yêu cầu ${code} không hợp lệ hoặc đang bị ẩn`);
+      throw new BadRequestException(
+        `Loại yêu cầu ${code} không hợp lệ hoặc đang bị ẩn`,
+      );
     }
   }
 }

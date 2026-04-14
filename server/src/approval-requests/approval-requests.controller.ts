@@ -22,7 +22,6 @@ type AuthenticatedRequest = ExpressRequest & {
   user: { id?: string; sub?: string; role: UserRole };
 };
 
-// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
 const { DIRECTOR, BRANCH_LEAD, ADMIN } = UserRole;
 
 /**
@@ -82,7 +81,6 @@ export class ApprovalRequestsController {
     @Param('id') requestId: string,
     @Body() dto: ApproveRequestDto,
   ) {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-call
     return this.service.approveRequest(this.resolveUserId(req), requestId, dto);
   }
 
@@ -97,7 +95,6 @@ export class ApprovalRequestsController {
     @Param('id') requestId: string,
     @Body() dto: RejectRequestDto,
   ) {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-call
     return this.service.rejectRequest(this.resolveUserId(req), requestId, dto);
   }
 }

@@ -1,0 +1,8 @@
+interface:
+  display_name: "Backend Nest CRUD"
+  short_description: "NestJS + Prisma patterns (RBAC, DTO, audit)"
+  brand_color: "#22C55E"
+  default_prompt: "Implement NestJS endpoints following Nexus Flow conventions"
+policy:
+  allow_implicit_invocation: true
+

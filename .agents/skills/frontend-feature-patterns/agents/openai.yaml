@@ -1,0 +1,8 @@
+interface:
+  display_name: "Frontend Feature Patterns"
+  short_description: "React/Vite feature patterns for Nexus Flow"
+  brand_color: "#F97316"
+  default_prompt: "Implement frontend features following Nexus Flow patterns"
+policy:
+  allow_implicit_invocation: true
+

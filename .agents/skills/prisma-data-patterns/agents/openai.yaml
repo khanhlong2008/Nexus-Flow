@@ -1,0 +1,8 @@
+interface:
+  display_name: "Prisma Data Patterns"
+  short_description: "Prisma schema/query/migration/seed conventions"
+  brand_color: "#14B8A6"
+  default_prompt: "Follow Nexus Flow Prisma conventions"
+policy:
+  allow_implicit_invocation: true
+

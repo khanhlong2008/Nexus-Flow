@@ -1,25 +1,9 @@
-import { type ReactNode, useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Activity, ArrowRightLeft, CheckCircle2, Clock3, XCircle } from 'lucide-react';
 import { getIncomingRequests, getOutgoingRequests } from '../services/approval-requests.service';
 import type { ApprovalRequestResponse } from '../types/approval-request';
-
-interface StatCardProps {
-  title: string;
-  value: number;
-  icon: ReactNode;
-}
-
-function StatCard({ title, value, icon }: StatCardProps) {
-  return (
-    <article className="stat-card">
-      <div className="stat-icon">{icon}</div>
-      <div>
-        <p>{title}</p>
-        <strong>{value}</strong>
-      </div>
-    </article>
-  );
-}
+import { PageHeader } from '../shared/components/PageHeader';
+import { StatCard } from '../shared/components/StatCard';
 
 export default function DashboardPage() {
   const [incoming, setIncoming] = useState<ApprovalRequestResponse[]>([]);
@@ -66,10 +50,10 @@ export default function DashboardPage() {
 
   return (
     <section className="page-stack">
-      <header className="section-head">
-        <h2>Tổng quan phê duyệt</h2>
-        <p>Theo dõi nhanh inbox và outbox theo vai trò hiện tại.</p>
-      </header>
+      <PageHeader
+        title="Tổng quan phê duyệt"
+        description="Theo dõi nhanh inbox và outbox theo vai trò hiện tại."
+      />
 
       <div className="stats-grid">
         <StatCard title="Chờ duyệt" value={statusSummary.pending} icon={<Clock3 size={18} />} />

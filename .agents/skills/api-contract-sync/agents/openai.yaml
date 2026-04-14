@@ -1,0 +1,8 @@
+interface:
+  display_name: "API Contract Sync"
+  short_description: "Sync FE/BE DTOs, services, types, UI"
+  brand_color: "#A855F7"
+  default_prompt: "Keep API contracts synchronized across server and web"
+policy:
+  allow_implicit_invocation: true
+

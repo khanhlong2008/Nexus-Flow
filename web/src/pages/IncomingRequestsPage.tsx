@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { CheckCircle2, XCircle } from 'lucide-react';
 import {
   approveRequest,
@@ -7,31 +7,39 @@ import {
 } from '../services/approval-requests.service';
 import { RequestTable } from '../components/RequestTable';
 import type { ApprovalRequestResponse } from '../types/approval-request';
+import { PageHeader } from '../shared/components/PageHeader';
+import { useAsyncTask } from '../shared/hooks/useAsyncTask';
+import { getApiErrorMessage } from '../shared/utils/error';
 
 export default function IncomingRequestsPage() {
   const [requests, setRequests] = useState<ApprovalRequestResponse[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [banner, setBanner] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [banner, setBanner] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const { isLoading, run } = useAsyncTask();
 
-  const load = async () => {
-    setLoading(true);
-    try {
+  const load = useCallback(async () => {
+    await run(async () => {
       const data = await getIncomingRequests();
+      setError(null);
       setRequests(data);
-    } finally {
-      setLoading(false);
-    }
-  };
+    }).catch((err: unknown) => {
+      setError(getApiErrorMessage(err, 'Không tải được danh sách yêu cầu đến.'));
+    });
+  }, [run]);
 
   useEffect(() => {
     void load();
-  }, []);
+  }, [load]);
 
   const handleApprove = async (request: ApprovalRequestResponse) => {
     const comment = window.prompt('Nhập ghi chú phê duyệt (có thể bỏ trống):', '') ?? undefined;
-    await approveRequest(request.id, comment);
-    setBanner('Đã phê duyệt thành công.');
-    await load();
+    try {
+      await approveRequest(request.id, comment);
+      setBanner({ type: 'success', message: 'Đã phê duyệt thành công.' });
+      await load();
+    } catch (err: unknown) {
+      setBanner({ type: 'error', message: getApiErrorMessage(err, 'Phê duyệt thất bại.') });
+    }
   };
 
   const handleReject = async (request: ApprovalRequestResponse) => {
@@ -39,19 +47,24 @@ export default function IncomingRequestsPage() {
     if (!comment || !comment.trim()) {
       return;
     }
-    await rejectRequest(request.id, comment.trim());
-    setBanner('Đã từ chối yêu cầu.');
-    await load();
+    try {
+      await rejectRequest(request.id, comment.trim());
+      setBanner({ type: 'success', message: 'Đã từ chối yêu cầu.' });
+      await load();
+    } catch (err: unknown) {
+      setBanner({ type: 'error', message: getApiErrorMessage(err, 'Từ chối yêu cầu thất bại.') });
+    }
   };
 
   return (
     <section className="page-stack">
-      <header className="section-head">
-        <h2>Hàng đợi duyệt</h2>
-        <p>Incoming theo role: Branch Lead duyệt PENDING, Director duyệt IN_REVIEW.</p>
-      </header>
+      <PageHeader
+        title="Hàng đợi duyệt"
+        description="Incoming theo role: Branch Lead duyệt PENDING, Director duyệt IN_REVIEW."
+      />
 
-      {banner && <div className="alert success">{banner}</div>}
+      {banner && <div className={`alert ${banner.type}`}>{banner.message}</div>}
+      {error && <div className="alert error">{error}</div>}
 
       <div className="quick-actions">
         <div><CheckCircle2 size={16} /> Duyệt để đẩy request lên bước tiếp theo</div>
@@ -60,7 +73,7 @@ export default function IncomingRequestsPage() {
 
       <RequestTable
         requests={requests}
-        isLoading={loading}
+        isLoading={isLoading}
         onApprove={handleApprove}
         onReject={handleReject}
         emptyMessage="Không có request nào cần xử lý lúc này."

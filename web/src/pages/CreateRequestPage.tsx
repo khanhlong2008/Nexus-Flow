@@ -7,6 +7,9 @@ import { useNavigate } from 'react-router-dom';
 import { createApprovalRequest } from '../services/approval-requests.service';
 import { getActiveRequestTypes } from '../services/request-types.service';
 import type { RequestTypeItem } from '../types/request-type';
+import { PageHeader } from '../shared/components/PageHeader';
+import { getApiErrorMessage } from '../shared/utils/error';
+import { parseJsonObject } from '../shared/utils/json';
 
 const schema = z.object({
   title: z.string().min(1, 'Tiêu đề không được để trống').max(255, 'Tối đa 255 ký tự'),
@@ -72,14 +75,10 @@ export default function CreateRequestPage() {
   const onSubmit = async (values: FormValues) => {
     setServerError(null);
 
-    let payload: Record<string, unknown> | undefined;
-    if (values.payloadText?.trim()) {
-      try {
-        payload = JSON.parse(values.payloadText) as Record<string, unknown>;
-      } catch {
-        setServerError('Payload phải là JSON hợp lệ.');
-        return;
-      }
+    const { value: payload, error } = parseJsonObject(values.payloadText ?? '');
+    if (error) {
+      setServerError(error);
+      return;
     }
 
     try {
@@ -91,18 +90,16 @@ export default function CreateRequestPage() {
       });
       navigate('/requests/mine');
     } catch (err: unknown) {
-      const message =
-        (err as { response?: { data?: { message?: string | string[] } } }).response?.data?.message;
-      setServerError(Array.isArray(message) ? message.join(', ') : message ?? 'Gửi yêu cầu thất bại.');
+      setServerError(getApiErrorMessage(err, 'Gửi yêu cầu thất bại.'));
     }
   };
 
   return (
     <section className="page-stack">
-      <header className="section-head">
-        <h2>Tạo yêu cầu mới</h2>
-        <p>Dữ liệu gửi lên backend: title, description, requestType, payload JSON.</p>
-      </header>
+      <PageHeader
+        title="Tạo yêu cầu mới"
+        description="Dữ liệu gửi lên backend: title, description, requestType, payload JSON."
+      />
 
       <form className="form-grid" onSubmit={handleSubmit(onSubmit)}>
         <label>

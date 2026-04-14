@@ -26,19 +26,23 @@ export class AuthService {
     private readonly auditLogService: AuditLogService,
   ) {}
 
-  async login(dto: LoginDto, ipAddress?: string, userAgent?: string): Promise<AuthResponseDto> {
+  async login(
+    dto: LoginDto,
+    ipAddress?: string,
+    userAgent?: string,
+  ): Promise<AuthResponseDto> {
     // 1. Tìm user theo email, bao gồm thông tin branch
     const user = await this.prisma.user.findUnique({
       where: { email: dto.email },
       select: {
-        id:       true,
-        email:    true,
-        name:     true,
+        id: true,
+        email: true,
+        name: true,
         password: true,
-        role:     true,
+        role: true,
         isActive: true,
         branchId: true,
-        branch:   { select: { name: true } },
+        branch: { select: { name: true } },
       },
     });
 
@@ -58,10 +62,10 @@ export class AuthService {
 
     // 3. Ghi audit log LOGIN
     await this.auditLogService.log({
-      userId:    user.id,
-      action:    'LOGIN',
-      module:    'AUTH',
-      entityId:  user.id,
+      userId: user.id,
+      action: 'LOGIN',
+      module: 'AUTH',
+      entityId: user.id,
       entityType: 'User',
       ipAddress,
       userAgent,
@@ -69,9 +73,9 @@ export class AuthService {
 
     // 4. Tạo JWT payload và ký token
     const payload: JwtPayload = {
-      sub:      user.id,
-      email:    user.email,
-      role:     user.role,
+      sub: user.id,
+      email: user.email,
+      role: user.role,
       branchId: user.branchId,
     };
 
@@ -81,13 +85,13 @@ export class AuthService {
     return {
       accessToken,
       user: {
-        id:         user.id,
-        email:      user.email,
-        name:       user.name,
-        role:       user.role,
-        branchId:   user.branchId,
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        role: user.role,
+        branchId: user.branchId,
         branchName: user.branch?.name ?? null,
-        menu:       buildMenuForRole(user.role),
+        menu: buildMenuForRole(user.role),
       },
     };
   }

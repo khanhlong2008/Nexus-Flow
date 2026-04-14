@@ -2,8 +2,9 @@ import { type FormEvent, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { LogIn } from 'lucide-react';
 import { login } from '../services/auth.service';
-import { useAuthStore } from '../store/auth.store';
+import { useAuth } from '../hooks/useAuth';
 import logo from '../assets/nexus-logo.svg';
+import { getApiErrorMessage } from '../shared/utils/error';
 
 const DEMO_ACCOUNTS = [
   { role: 'DIRECTOR', email: 'director@nexusflow.vn', password: 'Director@123' },
@@ -16,7 +17,7 @@ const DEMO_ACCOUNTS = [
 
 export default function LoginPage() {
   const navigate = useNavigate();
-  const setAuth = useAuthStore((state) => state.setAuth);
+  const { setAuth } = useAuth();
 
   const [email, setEmail] = useState(DEMO_ACCOUNTS[2].email);
   const [password, setPassword] = useState(DEMO_ACCOUNTS[2].password);
@@ -33,10 +34,7 @@ export default function LoginPage() {
       setAuth(result.accessToken, result.user);
       navigate('/dashboard', { replace: true });
     } catch (err: unknown) {
-      const message =
-        (err as { response?: { data?: { message?: string | string[] } } }).response?.data?.message;
-
-      setError(Array.isArray(message) ? message.join(', ') : message ?? 'Đăng nhập thất bại.');
+      setError(getApiErrorMessage(err, 'Đăng nhập thất bại.'));
     } finally {
       setLoading(false);
     }

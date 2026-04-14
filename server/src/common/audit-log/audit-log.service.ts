@@ -22,16 +22,16 @@ export class AuditLogService {
   async log(ctx: AuditLogContext): Promise<void> {
     await this.prisma.auditLog.create({
       data: {
-        userId:     ctx.userId,
-        action:     ctx.action,
-        module:     ctx.module,
-        entityId:   ctx.entityId,
+        userId: ctx.userId,
+        action: ctx.action,
+        module: ctx.module,
+        entityId: ctx.entityId,
         entityType: ctx.entityType,
-        requestId:  ctx.requestId,
-        oldValues:  ctx.oldValues as Prisma.InputJsonValue ?? undefined,
-        newValues:  ctx.newValues as Prisma.InputJsonValue ?? undefined,
-        ipAddress:  ctx.ipAddress,
-        userAgent:  ctx.userAgent,
+        requestId: ctx.requestId,
+        oldValues: (ctx.oldValues as Prisma.InputJsonValue) ?? undefined,
+        newValues: (ctx.newValues as Prisma.InputJsonValue) ?? undefined,
+        ipAddress: ctx.ipAddress,
+        userAgent: ctx.userAgent,
       },
     });
   }
