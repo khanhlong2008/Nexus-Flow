@@ -1,7 +1,11 @@
 import axios from 'axios';
 
+const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? '/api';
+const appBaseUrl = import.meta.env.BASE_URL ?? '/';
+const loginPath = new URL('login', `https://example.com${appBaseUrl}`).pathname;
+
 const apiClient = axios.create({
-  baseURL: '/api',
+  baseURL: apiBaseUrl,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -23,7 +27,7 @@ apiClient.interceptors.response.use(
     if (error.response?.status === 401) {
       localStorage.removeItem('access_token');
       localStorage.removeItem('auth_user');
-      window.location.href = '/login';
+      window.location.href = loginPath;
     }
     return Promise.reject(error);
   },
